@@ -132,6 +132,15 @@ class elfio
         create_mandatory_sections();
     }
 
+    //------------------------------------------------------------------------------
+    void create_no_sec( unsigned char file_class, unsigned char encoding )
+    {
+        sections_.clear();
+        segments_.clear();
+        convertor.setup( encoding );
+        header = create_header( file_class, encoding );
+    }
+
     void set_address_translation( std::vector<address_translation>& addr_trans )
     {
         addr_translator.set_address_translation( addr_trans );
@@ -991,6 +1000,16 @@ class elfio
             string_section_accessor str_writer( string_table );
             Elf_Word                pos = str_writer.add_string( name );
             new_section->set_name_string_offset( pos );
+
+            return new_section;
+        }
+
+        //------------------------------------------------------------------------------
+        section* add(Elf_Word name_string_offset) const
+        {
+            section* new_section = parent->create_section();
+
+            new_section->set_name_string_offset( name_string_offset );
 
             return new_section;
         }

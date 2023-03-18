@@ -63,29 +63,53 @@ template <class S> class symbol_section_accessor_template
         return nRet;
     }
 
-    //------------------------------------------------------------------------------
-    bool get_symbol( Elf_Xword      index,
-                     std::string&   name,
-                     Elf64_Addr&    value,
-                     Elf_Xword&     size,
-                     unsigned char& bind,
-                     unsigned char& type,
-                     Elf_Half&      section_index,
-                     unsigned char& other ) const
-    {
-        bool ret = false;
+  //------------------------------------------------------------------------------
+  bool get_symbol( Elf_Xword      index,
+                   std::string&   name,
+                   Elf64_Addr&    value,
+                   Elf_Xword&     size,
+                   unsigned char& bind,
+                   unsigned char& type,
+                   Elf_Half&      section_index,
+                   unsigned char& other ) const
+  {
+    bool ret = false;
 
-        if ( elf_file.get_class() == ELFCLASS32 ) {
-            ret = generic_get_symbol<Elf32_Sym>( index, name, value, size, bind,
-                                                 type, section_index, other );
-        }
-        else {
-            ret = generic_get_symbol<Elf64_Sym>( index, name, value, size, bind,
-                                                 type, section_index, other );
-        }
-
-        return ret;
+    if ( elf_file.get_class() == ELFCLASS32 ) {
+      ret = generic_get_symbol<Elf32_Sym>( index, name, value, size, bind,
+                                           type, section_index, other );
     }
+    else {
+      ret = generic_get_symbol<Elf64_Sym>( index, name, value, size, bind,
+                                           type, section_index, other );
+    }
+
+    return ret;
+  }
+
+  //------------------------------------------------------------------------------
+  bool get_symbol2( Elf_Xword     index,
+                   Elf_Word&      nameidx,
+                   Elf64_Addr&    value,
+                   Elf_Xword&     size,
+                   unsigned char& bind,
+                   unsigned char& type,
+                   Elf_Half&      section_index,
+                   unsigned char& other ) const
+  {
+    bool ret = false;
+
+    if ( elf_file.get_class() == ELFCLASS32 ) {
+      ret = generic_get_symbol2<Elf32_Sym>( index, nameidx, value, size, bind,
+                                           type, section_index, other );
+    }
+    else {
+      ret = generic_get_symbol2<Elf64_Sym>( index, nameidx, value, size, bind,
+                                           type, section_index, other );
+    }
+
+    return ret;
+  }
 
     //------------------------------------------------------------------------------
     bool get_symbol( const std::string& name,
@@ -425,47 +449,85 @@ template <class S> class symbol_section_accessor_template
         return false;
     }
 
-    //------------------------------------------------------------------------------
-    template <class T>
-    bool generic_get_symbol( Elf_Xword      index,
-                             std::string&   name,
-                             Elf64_Addr&    value,
-                             Elf_Xword&     size,
-                             unsigned char& bind,
-                             unsigned char& type,
-                             Elf_Half&      section_index,
-                             unsigned char& other ) const
-    {
-        bool ret = false;
+  //------------------------------------------------------------------------------
+  template <class T>
+  bool generic_get_symbol( Elf_Xword      index,
+                           std::string&   name,
+                           Elf64_Addr&    value,
+                           Elf_Xword&     size,
+                           unsigned char& bind,
+                           unsigned char& type,
+                           Elf_Half&      section_index,
+                           unsigned char& other ) const
+  {
+    bool ret = false;
 
-        if ( nullptr != symbol_section->get_data() &&
-             index < get_symbols_num() ) {
-            const T* pSym = reinterpret_cast<const T*>(
-                symbol_section->get_data() +
-                index * symbol_section->get_entry_size() );
+    if ( nullptr != symbol_section->get_data() &&
+        index < get_symbols_num() ) {
+      const T* pSym = reinterpret_cast<const T*>(
+          symbol_section->get_data() +
+              index * symbol_section->get_entry_size() );
 
-            const endianess_convertor& convertor = elf_file.get_convertor();
+      const endianess_convertor& convertor = elf_file.get_convertor();
 
-            section* string_section =
-                elf_file.sections[get_string_table_index()];
-            string_section_accessor str_reader( string_section );
-            const char*             pStr =
-                str_reader.get_string( convertor( pSym->st_name ) );
-            if ( nullptr != pStr ) {
-                name = pStr;
-            }
-            value         = convertor( pSym->st_value );
-            size          = convertor( pSym->st_size );
-            bind          = ELF_ST_BIND( pSym->st_info );
-            type          = ELF_ST_TYPE( pSym->st_info );
-            section_index = convertor( pSym->st_shndx );
-            other         = pSym->st_other;
+      section* string_section =
+          elf_file.sections[get_string_table_index()];
+      string_section_accessor str_reader( string_section );
+      const char*             pStr =
+          str_reader.get_string( convertor( pSym->st_name ) );
+      if ( nullptr != pStr ) {
+        name = pStr;
+      }
+      value         = convertor( pSym->st_value );
+      size          = convertor( pSym->st_size );
+      bind          = ELF_ST_BIND( pSym->st_info );
+      type          = ELF_ST_TYPE( pSym->st_info );
+      section_index = convertor( pSym->st_shndx );
+      other         = pSym->st_other;
 
-            ret = true;
-        }
-
-        return ret;
+      ret = true;
     }
+
+    return ret;
+  }
+
+  //------------------------------------------------------------------------------
+  template <class T>
+  bool generic_get_symbol2( Elf_Xword     index,
+                           Elf_Word&      nameidx,
+                           Elf64_Addr&    value,
+                           Elf_Xword&     size,
+                           unsigned char& bind,
+                           unsigned char& type,
+                           Elf_Half&      section_index,
+                           unsigned char& other ) const
+  {
+    bool ret = false;
+
+    if ( nullptr != symbol_section->get_data() &&
+        index < get_symbols_num() ) {
+      const T* pSym = reinterpret_cast<const T*>(
+          symbol_section->get_data() +
+              index * symbol_section->get_entry_size() );
+
+      const endianess_convertor& convertor = elf_file.get_convertor();
+
+      section* string_section =
+          elf_file.sections[get_string_table_index()];
+      string_section_accessor str_reader( string_section );
+      nameidx       = convertor( pSym->st_name );
+      value         = convertor( pSym->st_value );
+      size          = convertor( pSym->st_size );
+      bind          = ELF_ST_BIND( pSym->st_info );
+      type          = ELF_ST_TYPE( pSym->st_info );
+      section_index = convertor( pSym->st_shndx );
+      other         = pSym->st_other;
+
+      ret = true;
+    }
+
+    return ret;
+  }
 
     //------------------------------------------------------------------------------
     template <class T>
